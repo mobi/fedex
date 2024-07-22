@@ -143,7 +143,7 @@ module Fedex
       # Callback used after a failed shipment response.
       def failure_response(api_response, response)
         if response["errors"]
-          error_message = response["errors"][0]["message"]
+          error_message = "#{response["errors"][0]["code"]}: #{response["errors"][0]["message"]}"
           raise ShipLabelError, error_message
         end
       end
