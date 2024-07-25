@@ -8,7 +8,8 @@ module Fedex
     class Base
       include Helpers
       include HTTParty
-      read_timeout 5 # always have timeouts!
+
+      TIME_OUT = 30
       # If true the rate method will return the complete response from the Fedex Web Service
       attr_accessor :debug
       # Fedex Text URL
@@ -83,7 +84,7 @@ module Fedex
         {
           client_id: @credentials.client_id,
           client_secret: @credentials.client_secret,
-          grant_type: @credentials.grant_type
+          grant_type: 'client_credentials'
         }
       end
 
@@ -92,7 +93,7 @@ module Fedex
       #
       def bearer_token
         begin
-          response = HTTParty.post("#{api_url}/oauth/token", body: token_body)
+          response = HTTParty.post("#{api_url}/oauth/token", body: token_body, timeout: TIME_OUT)
           case response.code
           when 200
             JSON.parse(response.body)['access_token']
@@ -100,7 +101,7 @@ module Fedex
             Rails.logger.error(response["errors"][0]["message"])
             raise Exception.new(response["errors"][0]["message"])
           end
-        rescue HTTParty::Error, SocketError, Timeout::Error => e
+        rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout => e
           false
         end
       end
@@ -247,12 +248,12 @@ module Fedex
           end
 
           # For commented nodes I have checked and compared those nodes in old and new document and didn't find any relatable node. So, I kept them commented. These do not have any impact on our integration as we are not having any relation  with these nodes in our application.
-          if package[:insured_value]
+          # if package[:insured_value]
             # xml.InsuredValue{
             #   xml.Currency package[:insured_value][:currency]
             #   xml.Amount package[:insured_value][:amount]
             # }
-          end
+          # end
           new_object["weight"] = {"units" => package[:weight][:units], "value" => package[:weight][:value]}
           if package[:dimensions]
             new_object["dimensions"] = {
@@ -331,14 +332,6 @@ module Fedex
           end
         end
         return package_body
-      end
-
-      # Add customs clearance(for international shipments)
-      def add_customs_clearance
-        # xml.CustomsClearanceDetail{
-        #   hash_to_xml(xml, @customs_clearance_detail)
-        # }
-        @customs_clearance_detail if @customs_clearance_detail
       end
 
       # Fedex Web Service Api

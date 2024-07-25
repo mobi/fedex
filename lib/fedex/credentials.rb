@@ -12,12 +12,11 @@ module Fedex
     #
     # return a Fedex::Credentials object
     def initialize(options={})
-      requires!(options, :account_number, :mode, :grant_type, :client_id, :client_secret)
+      requires!(options, :account_number, :mode, :client_id, :client_secret)
       @account_number = options[:account_number]
       @mode = options[:mode]
 
       #New parameters
-      @grant_type = options[:grant_type]
       @client_id = options[:client_id]
       @client_secret = options[:client_secret]
     end

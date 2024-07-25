@@ -58,7 +58,7 @@ module Fedex
         request_body["requestedShipment"]["totalWeight"] = @mps[:total_weight][:value] if @mps.has_key? :total_weight
         request_body["requestedShipment"]["origin"] = add_origin if @origin
         request_body["requestedShipment"]["shipmentSpecialServices"] = add_special_services if @shipping_options[:return_reason] || @shipping_options[:cod] || @shipping_options[:saturday_delivery]
-        request_body["requestedShipment"]["customsClearanceDetail"] = add_customs_clearance if @customs_clearance_detail
+        request_body["requestedShipment"]["customsClearanceDetail"] =  @customs_clearance_detail if @customs_clearance_detail
         request_body["requestedShipment"]["masterTrackingId"] = add_master_tracking_id if @mps.has_key? :master_tracking_id
         request_body["labelResponseOptions"] = "LABEL"
         request_body["accountNumber"] = { "value" => @credentials.account_number }
@@ -108,11 +108,6 @@ module Fedex
       end
       # For commented nodes I have checked and compared those nodes in old and new document and didn't find any relatable node. So, I kept them commented. These do not have any impact on our integration as we are not having any relation  with these nodes in our application.
       def add_special_services
-        #   if @shipping_options[:saturday_delivery]
-        #     xml.SpecialServiceTypes "SATURDAY_DELIVERY"
-        #   end
-        # }
-
         if @shipping_options[:return_reason] || @shipping_options[:cod] || @shipping_options[:saturday_delivery]
           special_services = {}
           special_services["specialServiceTypes"] = Array.new
@@ -134,7 +129,7 @@ module Fedex
             special_services["shipmentCODDetail"]["codCollectionType"] = @shipping_options[:cod][:collection_type] if @shipping_options[:cod][:collection_type]
           end
           if @shipping_options[:saturday_delivery]
-
+            special_services["specialServiceTypes"] << "SATURDAY_DELIVERY"
           end
           return special_services
         end
@@ -144,8 +139,10 @@ module Fedex
       def failure_response(api_response, response)
         if response["errors"]
           error_message = "#{response["errors"][0]["code"]}: #{response["errors"][0]["message"]}"
-          raise ShipLabelError, error_message
+        else
+          error_message = 'We are unable to process this request. Please try again later or contact FedEx Customer Service.'
         end
+        raise ShipLabelError, error_message
       end
 
       # Callback used after a successful shipment response.
@@ -160,6 +157,8 @@ module Fedex
       # Successful request
       def success?(response)
         response["output"].present? && response["output"]["transactionShipments"].present? && response["errors"].nil?
+      rescue => e
+        false
       end
 
     end
